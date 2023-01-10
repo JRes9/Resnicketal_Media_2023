@@ -1,0 +1,601 @@
+---
+title: "Media_rnaseq"
+output: html_document
+date: "2022-09-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("Biocmanager")
+
+BiocManager::install("DESeq2", force = TRUE)
+BiocManager::install("apeglm")
+BiocManager::install("gprofiler2")
+BiocManager::install("biomaRt")
+BiocManager::install("EnhancedVolcano")
+BiocManager::install("ggplot2")
+BiocManager::install("clusterProfiler")
+BiocManager::install("enrichplot")
+BiocManager::install("DOSE")
+```
+
+```{r}
+setwd("/Users/pekosz-lab/Desktop/Jess/")
+library(DESeq2)
+library(apeglm)
+
+#read in data and info
+data <- read.csv("media_featurecountresult.csv")
+data$gene_ID <- as.character(data$gene_ID)
+sampleinfo <- read.csv("media_coldata.csv")
+
+#format matrix
+countDataMatrix <- as.matrix(data[ , -1])
+rownames(countDataMatrix) <- data[ ,1]
+
+deseqdata <- DESeqDataSetFromMatrix(countData = countDataMatrix, colData = sampleinfo, design =~condition)
+
+#perform differential expression
+dds <-DESeq(deseqdata, test = "Wald")
+
+#save results
+res <- results(dds)
+head(res)
+summary(res)
+
+#independent comparisons, 1st one is numerator
+diffonly <- results(dds, contrast = c("condition", "AirDiff", "PlusDiff"))
+summary(diffonly)
+write.csv(as.data.frame(diffonly), file = "diffresults.csv")
+
+undiffonly <- results(dds, contrast = c("condition", "AirUndiff", "PlusUndiff" ))
+summary(undiffonly)
+write.csv(as.data.frame(undiffonly), file = "undiffresults.csv")
+
+aironly <- results(dds, contrast = c("condition", "AirDiff", "AirUndiff"))
+summary(aironly)
+write.csv(as.data.frame(aironly), file = "airresults.csv")
+
+plusonly <- results(dds, contrast = c("condition", "PlusDiff", "PlusUndiff"))
+summary(plusonly)
+write.csv(as.data.frame(plusonly), file = "plusresults.csv")
+```
+
+```{r}
+
+#addgenenames
+resdiffonly <- results(dds, contrast = c("condition", "AirDiff", "PlusDiff"))
+summary(resdiffonly)
+
+resundiffonly <- results(dds, contrast = c("condition", "AirUndiff", "PlusUndiff" ))
+summary(resundiffonly)
+
+resaironly <- results(dds, contrast = c("condition", "AirDiff", "AirUndiff"))
+summary(resaironly)
+
+resplusonly <- results(dds, contrast = c("condition", "PlusDiff", "PlusUndiff"))
+summary(resplusonly)
+
+
+library("gprofiler2")
+res$ensembl <- sapply( strsplit ( rownames(res), split= "\\+" ), "[", 1)
+
+library("biomaRt")
+ensembl = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+genemap <- getBM(attributes = c("entrezgene_id", "hgnc_symbol", "external_gene_name", "description"),
+                  filters = "entrezgene_id",
+                  values = res$ensembl,
+                  mart = ensembl)
+idx <- match (res$ensembl, genemap$entrezgene_id)
+
+resdiffonly$hgnc_symbol <- genemap$hgnc_symbol [ idx ]
+resdiffonly$external_gene_name <- genemap$external_gene_name[ idx ]
+resdiffonly$description <- genemap$description[ idx ]
+
+resundiffonly$hgnc_symbol <- genemap$hgnc_symbol [ idx ]
+resundiffonly$external_gene_name <- genemap$external_gene_name[ idx ]
+resundiffonly$description <- genemap$description[ idx ]
+
+resaironly$hgnc_symbol <- genemap$hgnc_symbol [ idx ]
+resaironly$external_gene_name <- genemap$external_gene_name[ idx ]
+resaironly$description <- genemap$description[ idx ]
+
+resplusonly$hgnc_symbol <- genemap$hgnc_symbol [ idx ]
+resplusonly$external_gene_name <- genemap$external_gene_name[ idx ]
+resplusonly$description <- genemap$description[ idx ]
+
+#resave files with names
+
+write.csv(as.data.frame(resdiffonly), file = "diffresults_withnames.csv")
+
+
+write.csv(as.data.frame(resundiffonly), file = "undiffresults_withnames.csv")
+
+
+write.csv(as.data.frame(resaironly), file = "airresults_withnames.csv")
+
+
+write.csv(as.data.frame(resplusonly), file = "plusresults_withnames.csv")
+
+
+```
+
+```{r}
+#make volcano plot
+library(EnhancedVolcano)
+library(ggplot2)
+
+#diff only volcano plot
+resdiffonly <- read.csv("diffresults_withnames.csv")
+
+EnhancedVolcano(resdiffonly,
+                lab = resdiffonly$hgnc_symbol,
+                x = "log2FoldChange",
+                y = "padj",
+                selectLab = c( "TMPRSS11E", "SIX3",  "PAX6", "PADI3"),
+                xlab = bquote(~log[2]~ 'fold change'),
+                title = "Airway vs Ex Plus Differentiated",
+                pCutoff = 10e-2,
+                FCcutoff = 0.8,
+                pointSize = 2.0,
+                labSize = 3.0,
+                labCol = "black",
+                labFace = "bold",
+                boxedLabels = TRUE,
+                legendPosition = "bottom",
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = "black",
+                legendLabSize = 8,
+                legendIconSize = 1.0,
+                titleLabSize = 12,
+                subtitle = NULL,
+                axisLabSize = 12
+               ) + coord_flip() + ggplot2::coord_cartesian(xlim=c(-6,6)) + ggplot2::scale_x_continuous(breaks = seq(-6,6, 1))
+
+```
+```{r}
+#make volcano plot
+library(EnhancedVolcano)
+library(ggplot2)
+
+resundiffonly <- read.csv("undiffresults_withnames.csv")
+
+EnhancedVolcano(resundiffonly,
+                lab = resundiffonly$hgnc_symbol,
+                x = "log2FoldChange",
+                y = "padj",
+                
+                xlab = bquote(~log[2]~ 'fold change'),
+                title = "Airway vs Ex Plus Undifferentiated",
+                pCutoff = 10e-10,
+                FCcutoff = 5,
+                pointSize = 2.0,
+                labSize = 3.0,
+                labCol = "black",
+                labFace = "bold",
+                boxedLabels = TRUE,
+                legendPosition = "bottom",
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = "black",
+                legendLabSize = 8,
+                legendIconSize = 1.0,
+                
+                titleLabSize = 12,
+                subtitle = NULL,
+                axisLabSize = 12
+               ) + coord_flip() + ggplot2::coord_cartesian(xlim=c(-16,16)) + ggplot2::scale_x_continuous(breaks = seq(-16,16, 2))
+```
+
+```{r}
+#pathway analysis
+library("gprofiler2")
+
+#create groups
+sigdiff = subset(resdiffonly, padj <0.05)
+updiff = subset(sigdiff, log2FoldChange > 0)
+downdiff = subset(sigdiff, log2FoldChange < 0)
+
+gp_up_diff = gost(row.names(updiff), organism = "hsapiens")
+gp_down_diff = gost(row.names(downdiff), organism = "hsapiens")
+
+#order by log2FC
+up_ordered_diff = updiff[order(updiff$log2FoldChange, decreasing = TRUE),]
+gp_up_ordered_diff = gost(row.names(up_ordered_diff), organism = "hsapiens", ordered_query = TRUE)
+head(gp_up_ordered_diff$result, 8)
+
+#Make a dotplot
+
+down_ordered_diff = downdiff[order(downdiff$log2FoldChange, decreasing = TRUE),]
+gp_down_ordered_diff = gost(row.names(down_ordered_diff), organism = "hsapiens", ordered_query = TRUE)
+head(gp_down_ordered_diff$result, 8)
+
+gostplot(gp_up_diff, interactive = TRUE)
+gostplot(gp_down_diff, interactive = TRUE)
+
+multi_gpd = gost(list("Higher in Ex Plus" = row.names (downdiff), "Higher in Airway" = row.names(updiff)))
+p2d = gostplot(multi_gpd, interactive = FALSE)
+
+#Make a bar graph
+library(clusterProfiler)
+library(enrichplot)
+library(DOSE)
+up_names_diff = row.names(updiff)
+down_names_diff = row.names(downdiff)
+
+#enrichment analysis using gene names
+multigp_diff = gost(list("Higher in Airway" = up_names_diff, "Higher in Ex Plus" = down_names_diff), multi_query = FALSE, evcodes = TRUE)
+#modify the gProfiler data frame
+gp_mod_diff = multigp_diff$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_diff$GeneRatio = paste0(gp_mod_diff$intersection_size, "/", gp_mod_diff$query_size)
+gp_mod_diff$BgRatio = paste0(gp_mod_diff$term_size, "/", gp_mod_diff$effective_domain_size)
+names(gp_mod_diff) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_diff$geneID = gsub(",", "/", gp_mod_diff$geneID)
+#define as compareCLusterResult object
+gp_mod_cluster_diff = new("compareClusterResult", compareClusterResult = gp_mod_diff)
+#define as enrichResult object
+gp_mod_enrich_diff = new("enrichResult", result = gp_mod_diff)
+#dot plot
+enrichplot::dotplot(gp_mod_cluster_diff, font.size = 7, showCategory = 20)
+#bar plot
+barplot(gp_mod_enrich_diff, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+```
+```{r}
+#repeat above analysis for undiff
+
+#make volcano plot
+library(EnhancedVolcano)
+library(ggplot2)
+
+#undiff only volcano plot
+keyvals <- ifelse(
+  resundiffonly$log2Foldchange <0.8, "light blue",
+  ifelse(res$log2Foldchange > 0.8, "purple",
+         "black")
+)
+
+EnhancedVolcano(resundiffonly,
+                lab = resundiffonly$hgnc_symbol,
+                x = "log2FoldChange",
+                y = "padj",
+                #selectLab = c( ),
+                xlab = bquote(~log[2]~ 'fold change'),
+                title = "Airway vs Ex Plus Undifferentiated",
+                pCutoff = 10e-3,
+                FCcutoff = 2,
+                pointSize = 2.0,
+                labSize = 3.0,
+                labCol = "black",
+                labFace = "bold",
+                boxedLabels = TRUE,
+                legendPosition = "bottom",
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = "black",
+                legendLabSize = 8,
+                legendIconSize = 1.0,
+                titleLabSize = 12,
+                subtitle = NULL,
+                axisLabSize = 12
+               ) + coord_flip() 
+```
+```{r}
+#repeat above analysis for undiff
+#pathway analysis
+library("gprofiler2")
+
+#create groups
+sigundiff = subset(resundiffonly, padj <0.05)
+upundiff = subset(sigundiff, log2FoldChange > 0)
+downundiff = subset(sigundiff, log2FoldChange < 0)
+
+gp_up_undiff = gost(row.names(upundiff), organism = "hsapiens")
+gp_down_undiff = gost(row.names(downundiff), organism = "hsapiens")
+
+#order by log2FC
+up_ordered_undiff = upundiff[order(upundiff$log2FoldChange, decreasing = TRUE),]
+gp_up_ordered_undiff = gost(row.names(up_ordered_undiff), organism = "hsapiens", ordered_query = TRUE)
+head(gp_up_ordered_undiff$result, 8)
+
+#Make a dotplot
+
+down_ordered_undiff = downundiff[order(downundiff$log2FoldChange, decreasing = TRUE),]
+gp_down_ordered_undiff = gost(row.names(down_ordered_undiff), organism = "hsapiens", ordered_query = TRUE)
+head(gp_down_ordered_undiff$result, 8)
+
+gostplot(gp_up_undiff, interactive = TRUE)
+gostplot(gp_down_undiff, interactive = TRUE)
+
+multi_gpu = gost(list("Higher in Ex Plus" = row.names (downundiff), "Higher in Airway" = row.names(upundiff)))
+p2u = gostplot(multi_gpu, interactive = FALSE)
+
+#Make a bar graph
+library(clusterProfiler)
+library(enrichplot)
+library(DOSE)
+up_names_undiff = row.names(upundiff)
+down_names_undiff = row.names(downundiff)
+
+#enrichment analysis using gene names
+multigp_undiff = gost(list("Higher in Airway" = up_names_undiff, "Higher in Ex Plus" = down_names_undiff), multi_query = FALSE, evcodes = TRUE)
+#modify the gProfiler data frame
+gp_mod_undiff = multigp_undiff$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_undiff$GeneRatio = paste0(gp_mod_undiff$intersection_size, "/", gp_mod_undiff$query_size)
+gp_mod_undiff$BgRatio = paste0(gp_mod_undiff$term_size, "/", gp_mod_undiff$effective_domain_size)
+names(gp_mod_undiff) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_undiff$geneID = gsub(",", "/", gp_mod_undiff$geneID)
+#define as compareCLusterResult object
+gp_mod_cluster_undiff = new("compareClusterResult", compareClusterResult = gp_mod_undiff)
+#define as enrichResult object
+gp_mod_enrich_undiff = new("enrichResult", result = gp_mod_undiff)
+#dot plot
+enrichplot::dotplot(gp_mod_cluster_undiff, font.size = 7, showCategory = 20)
+#bar plot
+barplot(gp_mod_enrich_undiff, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+```
+```{r}
+#repeat analysis for  undiff vs diff
+#make volcano plot
+library(EnhancedVolcano)
+library(ggplot2)
+
+#ex plus only volcano plot
+
+EnhancedVolcano(resplusonly,
+                lab = resplusonly$hgnc_symbol,
+                x = "log2FoldChange",
+                y = "padj",
+                #selectLab = c( ),
+                xlab = bquote(~log[2]~ 'fold change'),
+                title = " Ex Plus Differentiated vs Undifferentiated",
+                pCutoff = 10e-5,
+                FCcutoff = 2,
+                pointSize = 2.0,
+                labSize = 3.0,
+                labCol = "black",
+                labFace = "bold",
+                boxedLabels = TRUE,
+                legendPosition = "bottom",
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = "black",
+                legendLabSize = 8,
+                legendIconSize = 1.0,
+                titleLabSize = 12,
+                subtitle = NULL,
+                axisLabSize = 12
+               ) + coord_flip() 
+
+#airway only volcano plot
+
+EnhancedVolcano(resaironly,
+                lab = resaironly$hgnc_symbol,
+                x = "log2FoldChange",
+                y = "padj",
+                #selectLab = c( ),
+                xlab = bquote(~log[2]~ 'fold change'),
+                title = " Airway Differentiated vs Undifferentiated",
+                pCutoff = 10e-5,
+                FCcutoff = 2,
+                pointSize = 2.0,
+                labSize = 3.0,
+                labCol = "black",
+                labFace = "bold",
+                boxedLabels = TRUE,
+                legendPosition = "bottom",
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = "black",
+                legendLabSize = 8,
+                legendIconSize = 1.0,
+                titleLabSize = 12,
+                subtitle = NULL,
+                axisLabSize = 12
+               ) + coord_flip() 
+```
+```{r}
+#repeat analysis for  undiff vs diff to compare
+#pathway analysis
+library("gprofiler2")
+
+#first plus samples
+#create groups
+sigplus = subset(resplusonly, padj <0.05)
+upplus = subset(sigplus, log2FoldChange > 0)
+downplus = subset(sigplus, log2FoldChange < 0)
+
+#gp_up_plus = gost(row.names(upplus), organism = "hsapiens")
+#gp_down_plus = gost(row.names(downplus), organism = "hsapiens")
+
+#order by log2FC
+#up_ordered_plus = upplus[order(upplus$log2FoldChange, decreasing = TRUE),]
+#gp_up_ordered_plus = gost(row.names(up_ordered_plus), organism = "hsapiens", ordered_query = TRUE)
+#head(gp_up_ordered_plus$result, 8)
+
+#Make a dotplot
+
+#down_ordered_plus = downplus[order(downplus$log2FoldChange, decreasing = TRUE),]
+#gp_down_ordered_plus = gost(row.names(down_ordered_plus), organism = "hsapiens", ordered_query = TRUE)
+#head(gp_down_ordered_plus$result, 8)
+
+#gostplot(gp_up_plus, interactive = TRUE)
+#gostplot(gp_down_plus, interactive = TRUE)
+
+#multi_gpp = gost(list("Higher in Plus Undiff" = row.names (downplus), "Higher in Plus Diff" = row.names(upplus)))
+#p2p = gostplot(multi_gpp, interactive = FALSE)
+
+#Make a bar graph
+library(clusterProfiler)
+library(enrichplot)
+library(DOSE)
+up_names_plus = row.names(upplus)
+down_names_plus = row.names(downplus)
+
+#enrichment analysis using gene names
+multigp_plus = gost(list("Higher in Plus Diff" = up_names_plus, "Higher in Plus Undiff" = down_names_plus), multi_query = FALSE, evcodes = TRUE)
+#modify the gProfiler data frame
+gp_mod_plus = multigp_plus$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_plus$GeneRatio = paste0(gp_mod_plus$intersection_size, "/", gp_mod_plus$query_size)
+gp_mod_plus$BgRatio = paste0(gp_mod_plus$term_size, "/", gp_mod_plus$effective_domain_size)
+names(gp_mod_plus) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_plus$geneID = gsub(",", "/", gp_mod_plus$geneID)
+#define as compareCLusterResult object
+gp_mod_cluster_plus = new("compareClusterResult", compareClusterResult = gp_mod_plus)
+#define as enrichResult object
+gp_mod_enrich_plus = new("enrichResult", result = gp_mod_plus)
+#dot plot
+enrichplot::dotplot(gp_mod_cluster_plus, font.size = 7, showCategory = 20)
+#bar plot
+barplot(gp_mod_enrich_plus, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+#then air samples
+#create groups
+sigair = subset(resaironly, padj <0.05)
+upair = subset(sigair, log2FoldChange > 0)
+downair = subset(sigair, log2FoldChange < 0)
+
+#gp_up_air = gost(row.names(upair), organism = "hsapiens")
+#gp_down_air = gost(row.names(downair), organism = "hsapiens")
+
+#order by log2FC
+#up_ordered_air = upair[order(upair$log2FoldChange, decreasing = TRUE),]
+#gp_up_ordered_air = gost(row.names(up_ordered_air), organism = "hsapiens", ordered_query = TRUE)
+#head(gp_up_ordered_air$result, 8)
+
+#Make a dotplot
+
+#down_ordered_air = downair[order(downair$log2FoldChange, decreasing = TRUE),]
+#gp_down_ordered_air = gost(row.names(down_ordered_air), organism = "hsapiens", ordered_query = TRUE)
+#head(gp_down_ordered_air$result, 8)
+
+#gostplot(gp_up_air, interactive = TRUE)
+#gostplot(gp_down_air, interactive = TRUE)
+
+#multi_gpa = gost(list("Higher in Air Undiff" = row.names (downair), "Higher in Air Diff" = row.names(upair)))
+#p2a = gostplot(multi_gpa, interactive = FALSE)
+
+#Make a bar graph
+library(clusterProfiler)
+library(enrichplot)
+library(DOSE)
+up_names_air = row.names(upair)
+down_names_air = row.names(downair)
+
+#enrichment analysis using gene names
+multigp_air = gost(list("Higher in Air Diff" = up_names_air, "Higher in Air Undiff" = down_names_air), multi_query = FALSE, evcodes = TRUE)
+#modify the gProfiler data frame
+gp_mod_air = multigp_air$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_air$GeneRatio = paste0(gp_mod_air$intersection_size, "/", gp_mod_air$query_size)
+gp_mod_air$BgRatio = paste0(gp_mod_air$term_size, "/", gp_mod_air$effective_domain_size)
+names(gp_mod_air) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_air$geneID = gsub(",", "/", gp_mod_air$geneID)
+#define as compareCLusterResult object
+gp_mod_cluster_air = new("compareClusterResult", compareClusterResult = gp_mod_air)
+#define as enrichResult object
+gp_mod_enrich_air = new("enrichResult", result = gp_mod_air)
+#dot plot
+enrichplot::dotplot(gp_mod_cluster_air, font.size = 7, showCategory = 20)
+#bar plot
+barplot(gp_mod_enrich_air, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+#look at overlap and differences between the two
+#in common during differentiation
+up <- intersect(row.names(upplus), row.names(upair))
+down <-  intersect(row.names(downplus), row.names(downair))
+
+#different during differentiation
+updiffplus <- setdiff(row.names(upplus), row.names(upair))
+updiffair <- setdiff(row.names(upair), row.names(upplus))
+downdiffplus <- setdiff(row.names(downplus), row.names(downair))
+downdiffair <- setdiff(row.names(downair), row.names(downplus))
+
+#convert to pathways
+multigp_both = gost(list("up during diff in both" = up, "down during diff in both" = down), multi_query = FALSE, evcodes = TRUE)
+multigp_dp = gost(list("up in plus not air" = updiffplus, "down in plus not air" = downdiffplus), multi_query = FALSE, evcodes = TRUE)
+multigp_da = gost(list("up in air not plus" = updiffair, "down in air not plus" = downdiffair), multi_query = FALSE, evcodes = TRUE)
+
+gp_mod_both = multigp_both$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_both$GeneRatio = paste0(gp_mod_both$intersection_size, "/", gp_mod_both$query_size)
+gp_mod_both$BgRatio = paste0(gp_mod_both$term_size, "/", gp_mod_both$effective_domain_size)
+names(gp_mod_both) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_both$geneID = gsub(",", "/", gp_mod_both$geneID)
+
+gp_mod_dp = multigp_dp$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_dp$GeneRatio = paste0(gp_mod_dp$intersection_size, "/", gp_mod_dp$query_size)
+gp_mod_dp$BgRatio = paste0(gp_mod_dp$term_size, "/", gp_mod_dp$effective_domain_size)
+names(gp_mod_dp) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_dp$geneID = gsub(",", "/", gp_mod_dp$geneID)
+
+gp_mod_da = multigp_da$result[,c("query", "source", "term_id", "term_name", "p_value", "query_size", "intersection_size", "term_size", "effective_domain_size", "intersection")]
+gp_mod_da$GeneRatio = paste0(gp_mod_da$intersection_size, "/", gp_mod_da$query_size)
+gp_mod_da$BgRatio = paste0(gp_mod_da$term_size, "/", gp_mod_da$effective_domain_size)
+names(gp_mod_da) = c("Cluster", "Category", "ID", "Description", "p.adjust", "query_size", "Count", "term_size", "effective_domain_size", "geneID", "GeneRatio", "BgRatio")
+gp_mod_da$geneID = gsub(",", "/", gp_mod_da$geneID)
+
+#define as compareClusterResult object
+gp_mod_cluster_both = new("compareClusterResult", compareClusterResult = gp_mod_both)
+gp_mod_cluster_dp = new("compareClusterResult", compareClusterResult = gp_mod_dp)
+gp_mod_cluster_da = new("compareClusterResult", compareClusterResult = gp_mod_da)
+
+
+#define as enrichResult object
+gp_mod_enrich_both = new("enrichResult", result = gp_mod_both)
+gp_mod_enrich_dp = new("enrichResult", result = gp_mod_dp)
+gp_mod_enrich_da = new("enrichResult", result = gp_mod_da)
+
+
+#plot
+enrichplot::dotplot(gp_mod_cluster_both, font.size = 7, showCategory = 20)
+barplot(gp_mod_enrich_both, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+enrichplot::dotplot(gp_mod_cluster_dp, font.size = 7, showCategory = 20)
+barplot(gp_mod_enrich_dp, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+enrichplot::dotplot(gp_mod_cluster_da, font.size = 7, showCategory = 20)
+barplot(gp_mod_enrich_da, order = TRUE, showCategory = 20, font.size = 5, color = "p.adjust") +
+  viridis::scale_fill_viridis(option = "viridis") +
+  ggplot2::facet_grid(~Cluster)
+
+
+
+
+```
