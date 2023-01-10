@@ -1,0 +1,6 @@
+#!/bin/sh
+#SBATCH --mem=50G
+#SBATCH --cores-per-socket=8
+#SBATCH --time=48:0:0
+echo "here we go again"
+./fastqc -o /mnt/VolA/data/jresnic4/Media/FastQCoutput /mnt/VolA/data/jresnic4/Media/mediacat/*.fastq.gz

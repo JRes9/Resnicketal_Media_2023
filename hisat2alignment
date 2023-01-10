@@ -1,0 +1,18 @@
+#!/bin/sh
+#SBATCH--mem=50G
+#SBATCH--cores-per-socket=8
+#SBACTH--time=2-1:0:0
+echo "this is linux command with 50GB memory and 2 days 1hr time limit"
+ls -lt
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_1_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_1_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_1.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_2_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_2_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_2.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_3_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirDiff_3_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_3.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_1_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_1_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_1.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_2_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_2_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_2.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_3_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/AirUndiff_3_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_3.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_1_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_1_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_1.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_2_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_2_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_2.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_3_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusDiff_3_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_3.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/PlusUndiff_1_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusUndiff_1_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_1.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/mediacat/PlusUndiff_2_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusUndiff_2_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_2.sam
+hisat2 -p 8 --dta -x refgenome/ensemblgenome2/genome  -1 /mnt/VolA/data/jresnic4/Media/FastQCoutput/PlusUndiff_3_R1.fastq.gz -2 /mnt/VolA/data/jresnic4/Media/mediacat/PlusUndiff_3_R2.fastq.gz -S /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_3.sam

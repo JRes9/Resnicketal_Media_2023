@@ -1,0 +1,18 @@
+#!/bin/sh
+#SBATCH --mem=50G
+#SBATCH --cores-per-socket=8
+#SBATCH --time=48:0:0
+echo "this is a linux command with 50GB memory and 2 day time limit"
+ls -lt
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_1.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_1.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_2.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_2.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_3.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirDiff_3.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_1.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_1.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_2.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_2.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_3.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/AirUndiff_3.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_1.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_1.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_2.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_2.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_3.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusDiff_3.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_1.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_1.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_2.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_2.sam
+samtools sort -@ 8 -o /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_3.bam /mnt/VolA/data/jresnic4/Media/hisat2outputensembl/PlusUndiff_3.sam
